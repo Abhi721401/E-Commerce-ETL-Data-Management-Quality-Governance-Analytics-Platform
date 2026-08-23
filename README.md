@@ -15,7 +15,7 @@ controls.
 ---
 ## Demo
 
-[▶️ Watch the project demo](./StreamlitDemoVideo.mp4)
+[▶️ Watch the project demo](https://github.com/user-attachments/assets/b619ca00-fed1-4cd3-ae66-0ee517d2d813)
 
 ## Table of Contents
 
