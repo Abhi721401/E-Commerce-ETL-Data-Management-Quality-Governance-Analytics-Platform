@@ -13,6 +13,9 @@ SQL, Python, PostgreSQL, Excel, Power BI, and automated operational
 controls.
 
 ---
+## Demo
+
+[▶️ Watch the project demo](./StreamlitDemoVideo.mp4)
 
 ## Table of Contents
 
