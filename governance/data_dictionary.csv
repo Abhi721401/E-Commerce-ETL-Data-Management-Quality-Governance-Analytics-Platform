@@ -1,0 +1,53 @@
+dataset,field_name,description,data_type,nullable,business_definition,data_owner,classification,quality_rule
+customers,customer_id,Order-specific identifier assigned to a customer for a single order,object,No,"Not the same as customer_unique_id; changes per order",Customer Data Team,Internal,DQ009
+customers,customer_unique_id,Persistent identifier for the underlying unique customer across all their orders,object,No,Used to track a customer across multiple purchases,Customer Data Team,Confidential,
+customers,customer_zip_code_prefix,First 5 digits of the customer's postal code,int64,No,Used for geographic and logistics analysis,Customer Data Team,Internal,
+customers,customer_city,City of the customer,object,No,Free-text city name; standardized to lowercase in processed layer,Customer Data Team,Internal,
+customers,customer_state,Two-letter Brazilian state code of the customer,object,No,Must match one of the 27 official Brazilian state codes,Customer Data Team,Internal,DQ010
+orders,order_id,Unique identifier for a customer order,object,No,Primary key of the orders table,Order Management Team,Internal,DQ001
+orders,customer_id,Foreign key linking the order to the customer who placed it,object,No,Must exist in customers.customer_id,Order Management Team,Internal,DQ002
+orders,order_status,Current lifecycle status of the order,object,No,"One of: created, approved, processing, invoiced, shipped, delivered, unavailable, canceled",Order Management Team,Internal,DQ003
+orders,order_purchase_timestamp,Timestamp when the order was placed,datetime,No,Anchor timestamp for all downstream delivery-timeliness calculations,Order Management Team,Internal,DQ004
+orders,order_approved_at,Timestamp when payment for the order was approved,datetime,Yes,May be null for a small number of unapproved/edge-case orders,Order Management Team,Internal,DQ005
+orders,order_delivered_carrier_date,Timestamp when the order was handed to the logistics carrier,datetime,Yes,Null for orders not yet shipped or cancelled before shipment,Order Management Team,Internal,DQ006
+orders,order_delivered_customer_date,Timestamp when the order was delivered to the customer,datetime,Conditional,"Required for status=delivered; legitimately null for cancelled/unavailable/in-progress orders",Order Management Team,Internal,DQ007;DQ008
+orders,order_estimated_delivery_date,Estimated delivery date communicated to the customer at purchase time,datetime,No,Used to compute delivery_delay_days and is_late,Order Management Team,Internal,
+order_items,order_id,Foreign key to the parent order,object,No,Must exist in orders.order_id,Fulfillment Data Team,Internal,DQ011
+order_items,order_item_id,Sequential line-item number within an order,int64,No,"Not globally unique alone — unique only as (order_id, order_item_id)",Fulfillment Data Team,Internal,DQ016
+order_items,product_id,Foreign key to the product sold in this line item,object,No,Must exist in products.product_id,Fulfillment Data Team,Internal,DQ012
+order_items,seller_id,Foreign key to the seller who fulfilled this line item,object,No,Must exist in sellers.seller_id,Fulfillment Data Team,Internal,DQ013
+order_items,shipping_limit_date,Deadline by which the seller must hand the item to the carrier,datetime,No,Used for seller performance / SLA analysis,Fulfillment Data Team,Internal,
+order_items,price,Sale price of the item (excludes freight),float64,No,Must be strictly greater than 0,Finance Data Team,Confidential,DQ014
+order_items,freight_value,Shipping cost charged for the item,float64,No,Must be greater than or equal to 0,Finance Data Team,Confidential,DQ015
+payments,order_id,Foreign key to the paid order,object,No,"An order can have multiple payment records — not unique alone",Finance Data Team,Internal,DQ017
+payments,payment_sequential,Sequence number identifying multiple payment methods on a single order,int64,No,"Unique only as (order_id, payment_sequential)",Finance Data Team,Internal,DQ020
+payments,payment_type,Method used to pay for the order,object,No,"e.g. credit_card, boleto, voucher, debit_card",Finance Data Team,Internal,
+payments,payment_installments,Number of installments the payment was split into,int64,No,Must be greater than or equal to 1,Finance Data Team,Internal,DQ019
+payments,payment_value,Monetary value of this payment record,float64,No,Must be greater than or equal to 0,Finance Data Team,Confidential,DQ018
+reviews,review_id,Unique identifier for a customer review,object,No,Primary key of the reviews table,Customer Experience Team,Internal,DQ027
+reviews,order_id,Foreign key to the reviewed order,object,No,Must exist in orders.order_id,Customer Experience Team,Internal,DQ025
+reviews,review_score,Star rating given by the customer,int64,No,Must be an integer between 1 and 5 inclusive,Customer Experience Team,Internal,DQ026
+reviews,review_comment_title,Optional free-text review title,object,Yes,"Optional field — null does not indicate a data quality issue",Customer Experience Team,Internal,
+reviews,review_comment_message,Optional free-text review body,object,Yes,"Optional field — null does not indicate a data quality issue",Customer Experience Team,Internal,
+reviews,review_creation_date,Timestamp the review survey was sent,datetime,No,,Customer Experience Team,Internal,
+reviews,review_answer_timestamp,Timestamp the customer submitted the review,datetime,No,,Customer Experience Team,Internal,
+products,product_id,Unique identifier for a product,object,No,Primary key of the products table,Catalog Data Team,Internal,DQ021;DQ022
+products,product_category_name,Product category in Portuguese,object,Yes,"Missing for a small subset of listings; joined to category_translation for English name",Catalog Data Team,Internal,DQ028
+products,product_name_lenght,Character length of the product name,float64,Yes,Descriptive attribute; legitimately missing when category is missing,Catalog Data Team,Public,
+products,product_description_lenght,Character length of the product description,float64,Yes,Descriptive attribute; legitimately missing when category is missing,Catalog Data Team,Public,
+products,product_photos_qty,Number of photos in the product listing,float64,Yes,Descriptive attribute; legitimately missing when category is missing,Catalog Data Team,Public,
+products,product_weight_g,Weight of the product in grams,float64,Yes,"Never imputed with 0 — null means unmeasured, not weightless",Catalog Data Team,Public,DQ029
+products,product_length_cm,Length of the product in centimeters,float64,Yes,Used for freight/logistics calculations,Catalog Data Team,Public,
+products,product_height_cm,Height of the product in centimeters,float64,Yes,Used for freight/logistics calculations,Catalog Data Team,Public,
+products,product_width_cm,Width of the product in centimeters,float64,Yes,Used for freight/logistics calculations,Catalog Data Team,Public,
+sellers,seller_id,Unique identifier for a seller,object,No,Primary key of the sellers table,Marketplace Data Team,Internal,DQ023
+sellers,seller_zip_code_prefix,First 5 digits of the seller's postal code,int64,No,Used for geographic/logistics analysis,Marketplace Data Team,Internal,
+sellers,seller_city,City of the seller,object,No,Free-text city name; standardized to lowercase in processed layer,Marketplace Data Team,Internal,
+sellers,seller_state,Two-letter Brazilian state code of the seller,object,No,Must match one of the 27 official Brazilian state codes,Marketplace Data Team,Internal,DQ024
+geolocation,geolocation_zip_code_prefix,First 5 digits of a Brazilian postal code,int64,No,Grain of the raw table is observation-level; deduplicated to prefix-level for the analytical lookup,Geospatial Data Team,Internal,DQ030
+geolocation,geolocation_lat,Latitude of the observation,float64,No,,Geospatial Data Team,Internal,
+geolocation,geolocation_lng,Longitude of the observation,float64,No,,Geospatial Data Team,Internal,
+geolocation,geolocation_city,City name associated with the zip prefix,object,No,Free-text; standardized to lowercase,Geospatial Data Team,Internal,
+geolocation,geolocation_state,State code associated with the zip prefix,object,No,,Geospatial Data Team,Internal,
+category_translation,product_category_name,Product category name in Portuguese,object,No,Join key to products.product_category_name,Catalog Data Team,Public,
+category_translation,product_category_name_english,Product category name translated to English,object,No,Used for English-language reporting and dashboards,Catalog Data Team,Public,

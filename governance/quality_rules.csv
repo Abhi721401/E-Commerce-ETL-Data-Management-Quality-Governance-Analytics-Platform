@@ -1,0 +1,31 @@
+rule_id,dataset,field,dimension,rule_description,severity,validation_type,params,active
+DQ001,orders,order_id,uniqueness,order_id must be unique,Critical,unique,,TRUE
+DQ002,orders,customer_id,completeness,customer_id cannot be null,Critical,not_null,,TRUE
+DQ003,orders,order_status,validity,order_status must be a recognized status value,High,categorical_set,VALID_ORDER_STATUSES,TRUE
+DQ004,orders,order_purchase_timestamp,completeness,order_purchase_timestamp cannot be null,Critical,not_null,,TRUE
+DQ005,orders,order_approved_at,timeliness,order_approved_at must be on/after order_purchase_timestamp when present,Medium,date_order,order_purchase_timestamp,TRUE
+DQ006,orders,order_delivered_carrier_date,timeliness,order_delivered_carrier_date must be on/after order_purchase_timestamp when present,Medium,date_order,order_purchase_timestamp,TRUE
+DQ007,orders,order_delivered_customer_date,timeliness,order_delivered_customer_date must be on/after order_purchase_timestamp when present,Medium,date_order,order_purchase_timestamp,TRUE
+DQ008,orders,order_delivered_customer_date,completeness,order_delivered_customer_date should not be null for orders with status = delivered,High,conditional_not_null,order_status:delivered,TRUE
+DQ009,customers,customer_id,uniqueness,customer_id must be unique,Critical,unique,,TRUE
+DQ010,customers,customer_state,validity,customer_state must be a valid Brazilian state code,Medium,categorical_set,VALID_BRAZIL_STATES,TRUE
+DQ011,order_items,order_id,referential_integrity,order_items.order_id must exist in orders.order_id,Critical,referential_integrity,orders:order_id,TRUE
+DQ012,order_items,product_id,referential_integrity,order_items.product_id must exist in products.product_id,Critical,referential_integrity,products:product_id,TRUE
+DQ013,order_items,seller_id,referential_integrity,order_items.seller_id must exist in sellers.seller_id,Critical,referential_integrity,sellers:seller_id,TRUE
+DQ014,order_items,price,validity,price must be greater than 0,High,min_value_exclusive,0,TRUE
+DQ015,order_items,freight_value,validity,freight_value must be greater than or equal to 0,High,min_value,0,TRUE
+DQ016,order_items,order_id;order_item_id,uniqueness,"(order_id, order_item_id) must be unique at item grain",Critical,composite_unique,order_item_id,TRUE
+DQ017,payments,order_id,referential_integrity,payments.order_id must exist in orders.order_id,Critical,referential_integrity,orders:order_id,TRUE
+DQ018,payments,payment_value,validity,payment_value must be greater than or equal to 0,High,min_value,0,TRUE
+DQ019,payments,payment_installments,validity,payment_installments must be greater than or equal to 1,Medium,min_value,1,TRUE
+DQ020,payments,order_id;payment_sequential,uniqueness,"(order_id, payment_sequential) must be unique at payment grain",Critical,composite_unique,payment_sequential,TRUE
+DQ021,products,product_id,uniqueness,product_id must be unique,Critical,unique,,TRUE
+DQ022,products,product_id,completeness,product_id cannot be null,Critical,not_null,,TRUE
+DQ023,sellers,seller_id,uniqueness,seller_id must be unique,Critical,unique,,TRUE
+DQ024,sellers,seller_state,validity,seller_state must be a valid Brazilian state code,Medium,categorical_set,VALID_BRAZIL_STATES,TRUE
+DQ025,reviews,order_id,referential_integrity,reviews.order_id must exist in orders.order_id,High,referential_integrity,orders:order_id,TRUE
+DQ026,reviews,review_score,validity,review_score must be between 1 and 5,Critical,range,1;5,TRUE
+DQ027,reviews,review_id,uniqueness,review_id must be unique,High,unique,,TRUE
+DQ028,products,product_category_name,referential_integrity,products.product_category_name should exist in category_translation.product_category_name,Low,referential_integrity,category_translation:product_category_name,TRUE
+DQ029,products,product_weight_g,validity,product_weight_g must be greater than 0 when present,Low,min_value_exclusive_optional,0,TRUE
+DQ030,geolocation,geolocation_zip_code_prefix,completeness,geolocation_zip_code_prefix cannot be null,Medium,not_null,,TRUE

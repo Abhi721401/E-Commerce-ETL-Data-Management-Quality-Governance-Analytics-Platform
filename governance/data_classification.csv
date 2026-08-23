@@ -1,0 +1,23 @@
+dataset,field_name,classification,classification_rationale,handling_guidance
+customers,customer_id,Internal,Order-scoped identifier with no direct external meaning outside the platform,Standard internal access controls
+customers,customer_unique_id,Confidential,Could be used to re-identify a customer across multiple orders/transactions,Restrict to roles that require cross-order customer analysis
+customers,customer_zip_code_prefix,Internal,Coarse geographic indicator; not individually identifying at prefix level,Standard internal access controls
+customers,customer_city,Internal,Coarse geographic indicator,Standard internal access controls
+customers,customer_state,Public,State-level geography with no individual identifying power,No special handling required
+orders,order_id,Internal,Operational identifier,Standard internal access controls
+orders,order_status,Internal,Operational lifecycle field,Standard internal access controls
+orders,order_purchase_timestamp,Internal,Operational timestamp,Standard internal access controls
+orders,order_delivered_customer_date,Internal,Operational timestamp,Standard internal access controls
+order_items,price,Confidential,Transaction-level monetary value,Restrict to finance / analytics roles
+order_items,freight_value,Confidential,Transaction-level monetary value,Restrict to finance / analytics roles
+payments,payment_value,Confidential,Transaction-level monetary value,Restrict to finance / analytics roles
+payments,payment_type,Internal,Operational payment metadata,Standard internal access controls
+reviews,review_score,Internal,Customer feedback metric,Standard internal access controls
+reviews,review_comment_message,Sensitive,Free-text field that could incidentally contain personal information volunteered by the customer,"Mask/redact in non-production environments; restrict access to CX analytics roles"
+products,product_id,Public,Catalog identifier with no personal data,No special handling required
+products,product_category_name,Public,Catalog metadata,No special handling required
+sellers,seller_id,Internal,Marketplace partner identifier,Standard internal access controls
+sellers,seller_city,Internal,Coarse geographic indicator,Standard internal access controls
+geolocation,geolocation_lat,Internal,Geographic coordinate at zip-prefix granularity (not individually identifying),Standard internal access controls
+geolocation,geolocation_lng,Internal,Geographic coordinate at zip-prefix granularity (not individually identifying),Standard internal access controls
+category_translation,product_category_name_english,Public,Reference/lookup data,No special handling required
