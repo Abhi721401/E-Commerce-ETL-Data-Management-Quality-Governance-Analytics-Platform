@@ -32,11 +32,7 @@ The primary objective is **data trust and operational reliability** — not expl
 
 ## 📸 Dashboard Preview
 
-### Business Analytics
-![Business Analytics Dashboard](dashboards/screenshots/business-analytics-1.png)
-
-### Data Quality & Governance
-![Data Quality & Governance Dashboard](dashboards/screenshots/data-quality-1.png)
+![Dashboard](https://github.com/user-attachments/assets/83085eb1-f62f-44be-ab11-a9395c6ec936)
 
 *(Dashboard built with Streamlit — see [Dashboard](#-dashboard) section. A separate Power BI specification is also included in `dashboards/power_bi_dashboard_spec.md` for teams that prefer a PostgreSQL-connected BI tool, but the screenshots above are from the local Streamlit app, not Power BI.)*
 
