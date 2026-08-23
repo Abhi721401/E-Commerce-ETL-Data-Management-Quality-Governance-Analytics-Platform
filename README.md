@@ -1,410 +1,790 @@
 # E-Commerce ETL, Data Management, Quality & Governance Analytics Platform
 
-A controlled data management pipeline that ensures data is **accurate,
-complete, consistent, traceable, governed, and ready for business
-analytics** — built on the Brazilian E-Commerce Public Dataset by Olist.
+An end-to-end ETL, data quality, governance, reconciliation, and analytics platform built on the Brazilian E-Commerce Public Dataset by Olist.
 
-**Business analytics is secondary here. Data quality, governance,
-controls, and operational reliability are the primary focus.** This
-project is designed to demonstrate the skills required for a data
-management / analytics-and-metrics analyst role: data validation, data
-integrity, governance, classification, issue management, reconciliation,
-SQL, Python, PostgreSQL, Excel, Power BI, and automated operational
-controls.
+This project demonstrates how raw operational data is turned into a **validated, governed, reconciled, analytics-ready** data platform using Python, Pandas, PostgreSQL, SQL, Docker, Airflow, automated data-quality controls, and an interactive dashboard.
 
----
-## Demo
-
-[▶️ Watch the project demo](https://github.com/user-attachments/assets/b619ca00-fed1-4cd3-ae66-0ee517d2d813)
-
-## Table of Contents
-
-1. [Project Overview](#project-overview)
-2. [Business Problem](#business-problem)
-3. [Why Data Quality and Governance Matter](#why-data-quality-and-governance-matter)
-4. [Role Alignment](#role-alignment)
-5. [Architecture](#architecture)
-6. [Dataset](#dataset)
-7. [Data Model (Star Schema)](#data-model-star-schema)
-8. [Data Quality Framework](#data-quality-framework)
-9. [Governance Framework](#governance-framework)
-10. [Issue Management](#issue-management)
-11. [Reconciliation](#reconciliation)
-12. [Dashboards](#dashboards)
-13. [Orchestration (Airflow)](#orchestration-airflow)
-14. [Testing](#testing)
-15. [Deployment (Docker)](#deployment-docker)
-16. [Project Results](#project-results)
-17. [Limitations](#limitations)
-18. [Future Improvements](#future-improvements)
-19. [Setup & Run Instructions](#setup--run-instructions)
+The primary objective is **data trust and operational reliability** — not exploratory data analysis. Business analytics is a secondary output of the platform, not its purpose.
 
 ---
 
-## Project Overview
+## 📊 Project Highlights
 
-Most public "Olist portfolio projects" are Kaggle-style exploratory
-notebooks: load the CSVs, `dropna()`, `drop_duplicates()`, plot a few
-charts. This project is deliberately built the opposite way — as a
-**controlled data pipeline** with the same structure a data
-management/analytics team would run against real operational data:
+*(Results below are from a full pipeline run against the complete Olist dataset — generated dynamically by the pipeline, not manually entered.)*
 
-```
-Extract → Profile → Validate → Transform → Quality Score + Governance
-        → Reconciliation → PostgreSQL (Star Schema) → SQL Analytics
-        → Power BI (Business + Governance dashboards) → Automated Reporting
-        → Airflow orchestration → Docker deployment
-```
+| Metric | Result |
+|---|---|
+| Total records processed | 1,550,922 |
+| Data-quality rules evaluated | 30 |
+| **Overall data-quality score** | **99.96%** |
+| Completeness | 100.00% |
+| Uniqueness | 99.71% |
+| Validity | 100.00% |
+| Referential integrity | 100.00% |
+| Timeliness | 99.94% |
+| Reconciliation checks | 15 / 15 passed |
+| Critical open issues | 0 |
+| Open data-quality issues | 6 |
+| Resolved issues | 24 |
+| Pipeline status | ✅ PASSED |
 
-Every cleaning decision is documented. Every quality rule is
-config-driven, not hardcoded. Every stage is reconciled against the one
-before it. Nothing is fabricated — every number in this repository is
-calculated from the actual dataset at pipeline run time.
+---
 
-## Business Problem
+## 📸 Dashboard Preview
 
-An e-commerce marketplace (Olist) aggregates orders across thousands of
-independent sellers, multiple carriers, and millions of customer
-interactions. Before that data can be trusted for revenue reporting,
-seller performance scorecards, or delivery SLAs, someone has to answer:
+### Business Analytics
+![Business Analytics Dashboard](dashboards/screenshots/business-analytics-1.png)
 
-- Is the data complete? Are required fields actually populated?
-- Is it unique — are we double-counting orders or payments?
-- Is it valid — are prices, ratings, and state codes within legal bounds?
-- Is it consistent — are categories and formats standardized?
-- Is it referentially intact — does every order item point to a real
-  order, product, and seller?
-- Is it timely — do event timestamps happen in a physically possible
-  sequence?
+### Data Quality & Governance
+![Data Quality & Governance Dashboard](dashboards/screenshots/data-quality-1.png)
 
-This project builds the pipeline, controls, and dashboards that answer
-those questions continuously, not as a one-off analysis.
+*(Dashboard built with Streamlit — see [Dashboard](#-dashboard) section. A separate Power BI specification is also included in `dashboards/power_bi_dashboard_spec.md` for teams that prefer a PostgreSQL-connected BI tool, but the screenshots above are from the local Streamlit app, not Power BI.)*
 
-## Why Data Quality and Governance Matter
+---
 
-Bad data doesn't fail loudly — it fails quietly, in a dashboard a VP
-trusts, or a reconciliation that's off by 2% and nobody notices until
-finance does. A data management/analytics function exists to catch that
-before it reaches a decision-maker. This project operationalizes that
-responsibility: every raw file is profiled before it's touched, every
-transformation is justified and logged, every load is reconciled back to
-its source, and every quality issue is tracked to resolution instead of
-silently disappearing.
+## 🧭 Table of Contents
 
-## Role Alignment
+- [Project Overview](#-project-overview)
+- [Business Problem](#-business-problem)
+- [Architecture](#️-architecture)
+- [Technology Stack](#️-technology-stack)
+- [Dataset](#-dataset)
+- [ETL Pipeline](#-etl-pipeline)
+- [Data Quality Framework](#-data-quality-framework)
+- [Data Quality Scorecard](#-data-quality-scorecard)
+- [Issue Management](#-issue-management)
+- [Reconciliation Framework](#-reconciliation-framework)
+- [PostgreSQL Data Warehouse](#️-postgresql-data-warehouse)
+- [SQL Analytics](#-sql-analytics)
+- [Dashboard](#-dashboard)
+- [Governance Framework](#-governance-framework)
+- [Airflow Orchestration](#️-airflow-orchestration)
+- [Testing](#-testing)
+- [Docker Deployment](#-docker-deployment)
+- [Project Structure](#-project-structure)
+- [Setup](#-setup)
+- [Generated Reports](#-generated-reports)
+- [Project Results](#-project-results)
+- [Skills Demonstrated](#-skills-demonstrated)
+- [Limitations](#️-limitations)
+- [Future Improvements](#-future-improvements)
+- [Why This Project Matters](#-why-this-project-matters)
 
-| Skill Area                | Where it's demonstrated |
-|----------------------------|---------------------------|
-| Data management             | `src/extract.py`, `src/config.py`, immutable raw layer |
-| Data processing               | `src/transform.py`, `src/load.py` |
-| Data validation                 | `src/validation.py`, `governance/quality_rules.csv` |
-| Data quality                      | `src/quality_score.py`, `reports/quality_scorecard.json` |
-| Data integrity                      | Referential-integrity checks (DQ011–DQ013, DQ017, DQ025, DQ028) |
-| Data governance                       | `governance/data_dictionary.csv`, `data_classification.csv` |
-| Data classification                     | `governance/data_classification.csv` (simulated) |
-| Data issue management                     | `src/reporting.py::write_issue_register`, `reports/issue_register.csv` |
-| Data reconciliation                         | `src/reconciliation.py` |
-| SQL                                            | `sql/create_tables.sql`, `sql/transformations.sql`, `sql/analytics.sql` |
-| Python / Pandas                                  | Entire `src/` package |
-| PostgreSQL                                         | Star schema warehouse (`sql/`, `src/load.py`) |
-| Excel                                                | `excel/generate_excel_report.py` |
-| Power BI                                               | `dashboards/power_bi_dashboard_spec.md` |
-| Reporting                                                | `src/reporting.py`, automated `pipeline_run_report.json` |
-| Operational controls                                       | Reconciliation PASS/WARNING/FAIL gating, Airflow failure conditions |
-| Automation                                                    | `dags/olist_etl_dag.py` |
-| Testing                                                         | `tests/` (pytest) |
-| Cross-functional / operational thinking                          | Data dictionary ownership, conditional business-rule validation |
+---
 
-## Architecture
+## 🎯 Project Overview
+
+Most Olist portfolio projects follow the same pattern:
 
 ```
-                    OLIST RAW CSVs
-                          │
-                          ▼
+CSV → Pandas → Charts
+```
+
+This project takes a different approach. It treats the dataset as if it were an operational data source entering a production data-management environment — every stage exists to answer one question: **can this data be trusted before it's used for a decision?**
+
+```
+                 OLIST RAW CSVs
+                       │
+                       ▼
                     EXTRACT
-                  Python / Pandas
-                          │
-                          ▼
+                       │
+                       ▼
                   DATA PROFILING
-          Schema / Missing / Duplicates
-                          │
-                          ▼
+                       │
+                       ▼
                   DATA VALIDATION
-      Completeness / Validity / Consistency
-       Uniqueness / Integrity / Timeliness
-                          │
-                          ▼
-                   TRANSFORMATION
-              Cleaning + Business Logic
-                          │
-              ┌───────────┴───────────┐
-              ▼                       ▼
-       DATA QUALITY             GOVERNANCE
-       ISSUE REGISTER           DATA DICTIONARY
-       QUALITY SCORE            CLASSIFICATION
-              │                       │
-              └───────────┬───────────┘
-                          ▼
-                    RECONCILIATION
-                          │
-                          ▼
-                    POSTGRESQL
-                          │
-                          ▼
-                    STAR SCHEMA
-                          │
-              ┌───────────┴───────────┐
-              ▼                       ▼
-        SQL ANALYTICS            CONTROL REPORTS
-              │                       │
-              └───────────┬───────────┘
-                          ▼
-                     POWER BI
-              ┌───────────┴───────────┐
-              ▼                       ▼
-       BUSINESS ANALYTICS       DATA GOVERNANCE
-          DASHBOARD                DASHBOARD
-                          │
-                          ▼
-                        AIRFLOW
-                          │
-                          ▼
-                       DOCKER
+                       │
+                       ▼
+                  TRANSFORMATION
+                       │
+             ┌─────────┴─────────┐
+             ▼                   ▼
+       DATA QUALITY          GOVERNANCE
+       QUALITY SCORE         DATA DICTIONARY
+       ISSUE REGISTER        CLASSIFICATION
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+                 RECONCILIATION
+                       │
+                       ▼
+                  POSTGRESQL
+                       │
+                       ▼
+                  STAR SCHEMA
+                       │
+             ┌─────────┴─────────┐
+             ▼                   ▼
+       SQL ANALYTICS        CONTROL REPORTS
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+                   DASHBOARD
+                  (Streamlit)
+                       │
+                       ▼
+                    AIRFLOW
+                       │
+                       ▼
+                    DOCKER
 ```
 
-## Dataset
+**Core principle:** data is not analytics-ready until it has passed validation, quality scoring, governance checks, and reconciliation.
 
-**Brazilian E-Commerce Public Dataset by Olist — Kaggle**
+---
+
+## 💼 Business Problem
+
+E-commerce platforms generate data across many operational systems — customers, orders, products, sellers, payments, reviews, order items, geolocation. Before that data can be used for revenue reporting, seller performance, or operational decisions, several questions need answers:
+
+| Dimension | Question |
+|---|---|
+| Completeness | Are required fields populated? |
+| Uniqueness | Are business keys unique at the correct grain? |
+| Validity | Are values within acceptable business ranges? |
+| Consistency | Are formats, categories, and codes standardized? |
+| Referential Integrity | Do foreign keys point to valid parent records? |
+| Timeliness | Do timestamps follow physically possible sequences? |
+| Reconciliation | Do record counts and financial totals stay consistent across pipeline stages? |
+
+This project implements automated, documented controls for each of these — not a one-off manual check.
+
+---
+
+## 🏗️ Architecture
+
+```
+                         OLIST CSV DATA
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │     EXTRACT      │
+                    │ Python / Pandas  │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │     PROFILE      │
+                    │ Schema / Nulls   │
+                    │ Duplicates       │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │    VALIDATE      │
+                    │ 30 Quality Rules │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │   TRANSFORM      │
+                    │ Cleaning / Logic │
+                    └────────┬─────────┘
+                             │
+                ┌────────────┴────────────┐
+                ▼                         ▼
+        ┌───────────────┐         ┌────────────────┐
+        │ DATA QUALITY  │         │   GOVERNANCE   │
+        │ Scorecard     │         │ Dictionary     │
+        │ Issue Register│         │ Classification │
+        └───────┬───────┘         └───────┬────────┘
+                │                         │
+                └────────────┬────────────┘
+                             ▼
+                    ┌──────────────────┐
+                    │ RECONCILIATION   │
+                    │ RAW → TRANSFORMED│
+                    │ → POSTGRES       │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │   POSTGRESQL     │
+                    │   Star Schema    │
+                    └────────┬─────────┘
+                             │
+                ┌────────────┴────────────┐
+                ▼                         ▼
+        ┌───────────────┐         ┌────────────────┐
+        │ SQL ANALYTICS │         │ CONTROL REPORTS│
+        └───────┬───────┘         └───────┬────────┘
+                │                         │
+                └────────────┬────────────┘
+                             ▼
+                        STREAMLIT
+                       DASHBOARD
+                             │
+                             ▼
+                          AIRFLOW
+                             │
+                             ▼
+                           DOCKER
+```
+
+---
+
+## 🛠️ Technology Stack
+
+**Programming & Data Processing**
+Python · Pandas · NumPy · PyArrow
+
+**Database & SQL**
+PostgreSQL · SQLAlchemy · psycopg2 · SQL
+
+**Data Quality & Governance**
+Config-driven validation rules · data-quality scorecards · issue management · data dictionary · data classification · referential-integrity controls · reconciliation controls
+
+**Orchestration & Deployment**
+Apache Airflow · Docker · Docker Compose
+
+**Reporting & Analytics**
+SQL analytics · Excel (openpyxl) · Streamlit dashboard · Power BI specification
+
+**Testing**
+Pytest
+
+---
+
+## 📦 Dataset
+
+**Brazilian E-Commerce Public Dataset by Olist**
 Source: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
 
-9 CSV files covering ~99,441 orders placed on the Olist marketplace
-between 2016–2018, across customers, sellers, products, payments, order
-items, reviews, and geolocation. The dataset is public; this project's
-governance framework and classifications are simulated for portfolio
-purposes (see [Limitations](#limitations)).
+Nine CSV files covering ~99,441 orders from the Brazilian e-commerce marketplace:
 
-Place the raw files in `data/raw/` before running the pipeline — see
-[Setup & Run Instructions](#setup--run-instructions).
+```
+olist_customers_dataset.csv
+olist_geolocation_dataset.csv
+olist_order_items_dataset.csv
+olist_order_payments_dataset.csv
+olist_order_reviews_dataset.csv
+olist_orders_dataset.csv
+olist_products_dataset.csv
+olist_sellers_dataset.csv
+product_category_name_translation.csv
+```
 
-## Data Model (Star Schema)
+Records processed per dataset:
 
-**Fact table:** `fact_sales` (grain = one row per order item)
-`order_key, order_id, order_item_id, customer_key, product_key,
-seller_key, date_key, order_status, price, freight_value, total_value`
+```
+Customers                99,441
+Geolocation            1,000,163
+Order Items              112,650
+Payments                 103,886
+Reviews                   99,224
+Orders                    99,441
+Products                  32,951
+Sellers                    3,095
+Category Translation          71
+──────────────────────────────────
+Total                  1,550,922
+```
 
-**Dimensions:** `dim_customer`, `dim_product`, `dim_seller`, `dim_date`,
-`dim_location` (deduplicated zip-prefix geolocation lookup — see the
-geolocation governance decision below).
+---
 
-Full DDL: `sql/create_tables.sql`. Referential integrity is enforced at
-the database level via foreign keys from `fact_sales` to each dimension.
+## 🔄 ETL Pipeline
 
-## Data Quality Framework
+**Extract** — raw CSVs are loaded without modifying the source layer (`data/raw/` is never written to).
 
-Six dimensions, implemented as a **config-driven rule engine**
-(`src/validation.py` + `governance/quality_rules.csv`) rather than
-hardcoded per-dataset logic — adding a rule is a CSV edit, not a code
-change:
+**Profile** — every dataset is profiled for schema, data types, missing values, duplicate records, key uniqueness, and basic distributions.
 
-| Dimension | What it checks |
+**Validate** — data is checked against 30 configurable quality rules (`governance/quality_rules.csv`).
+
+**Transform** — standardization, business-rule-aware missingness handling, composite-key construction, type conversion, category mapping, and analytical dimension construction (`src/transform.py`).
+
+**Load** — validated data is loaded into PostgreSQL using a star-schema design (`src/load.py`).
+
+**Report** — the pipeline generates machine-readable control reports:
+
+```
+reports/
+├── data_cleaning_log.csv
+├── issue_register.csv
+├── pipeline_run_report.json
+├── profile_report.json
+├── quality_scorecard.json
+└── reconciliation_report.json
+```
+
+---
+
+## 🧪 Data Quality Framework
+
+The validation engine evaluates 30 configurable rules across six dimensions.
+
+| Dimension | Purpose | Result |
+|---|---|---|
+| Completeness | Required fields populated | 100.00% |
+| Uniqueness | Key uniqueness at correct grain | 99.71% |
+| Validity | Values satisfy defined constraints | 100.00% |
+| Referential Integrity | Foreign keys resolve correctly | 100.00% |
+| Timeliness | Event timestamps are logically ordered | 99.94% |
+
+### Business-aware validation
+
+The project deliberately avoids simplistic cleaning such as `df.dropna()` across a whole table. Missingness is interpreted according to business context:
+
+- Review comments are optional — a missing comment is not a defect.
+- Delivery dates are only required for orders with status `delivered`.
+- Product physical attributes (weight, dimensions) are never blindly replaced with zero.
+- Order-item and payment sequence numbers are validated as **composite keys** (`order_id` + sequence), not standalone primary keys.
+- Geolocation duplication is handled through a documented, deterministic analytical lookup rather than modifying the raw table.
+
+---
+
+## 📊 Data Quality Scorecard
+
+**Overall quality score: 99.96%**
+
+```
+Completeness             100.00%
+Validity                 100.00%
+Referential Integrity    100.00%
+Timeliness                99.94%
+Uniqueness                99.71%
+──────────────────────────────
+Overall                   99.96%
+```
+
+The score is calculated by `src/quality_score.py` from actual validation results — it is not manually entered.
+
+---
+
+## 🚨 Issue Management
+
+Every validation rule produces an issue-register record. Schema:
+
+```
+rule_id, dataset, field, issue_description, severity,
+affected_records, detected_at, status, resolution, resolved_at
+```
+
+**Current results**
+
+```
+Total rules evaluated       30
+Resolved issues             24
+Open issues                  6
+Critical open issues         0
+```
+
+Open issues by severity:
+
+```
+High       2
+Medium     2
+Low        2
+```
+
+Open issues by dataset:
+
+```
+Orders       2
+Products     2
+Payments     1
+Reviews      1
+```
+
+This reflects a core governance principle: **data quality problems are tracked as operational issues, not silently removed during cleaning.**
+
+### Example issues identified
+
+- **Delivery timestamp validation** — a small number of records violated the expected chronological relationship between purchase and carrier-delivery timestamps.
+- **Delivered-order completeness** — a small number of `delivered`-status orders were missing a customer delivery timestamp.
+- **Product category integrity** — a small number of `product_category_name` values did not resolve against the category-translation reference table.
+
+Each is retained in the issue register with severity and affected-record counts — see `reports/issue_register.csv`.
+
+---
+
+## 🔁 Reconciliation Framework
+
+Source-to-target reconciliation across:
+
+```
+RAW → TRANSFORMED → POSTGRESQL
+```
+
+Controls: record counts, distinct key counts, and monetary totals (price, freight, payment value). Each check is classified **PASS / WARNING / FAIL** against documented variance thresholds.
+
+**Actual result**
+
+```
+Total checks      15
+Passed             15
+Warnings            0
+Failed              0
+Overall status:  PASS
+```
+
+A `FAIL` status is designed to stop downstream orchestration (Airflow) rather than let potentially incorrect data continue through the pipeline.
+
+---
+
+## 🗄️ PostgreSQL Data Warehouse
+
+Validated data is organized into a star schema (`sql/create_tables.sql`).
+
+**Fact table — `fact_sales`** (grain: one row per order item)
+```
+order_key, order_id, order_item_id, customer_key, product_key,
+seller_key, date_key, order_status, price, freight_value, total_value
+```
+
+**Dimensions**
+```
+dim_customer, dim_product, dim_seller, dim_date, dim_location
+```
+
+Foreign-key relationships enforce database-level referential integrity between the fact and dimension tables.
+
+---
+
+## 📈 SQL Analytics
+
+`sql/analytics.sql` — production-style SQL for both business and governance analytics.
+
+**Business Analytics:** total revenue, monthly revenue trend, order volume, average order value, revenue by category, revenue by state, seller performance, delivery performance, order-status distribution.
+
+**Governance Analytics:** missing-value rates, duplicate-key checks, validation failures, issues by severity/dataset, open vs. resolved issues, quality score by dataset, reconciliation status.
+
+---
+
+## 📺 Dashboard
+
+Results are viewed through an interactive **Streamlit** app (`dashboards/streamlit_app.py`) — no PostgreSQL connection or BI license required, since it reads directly from the pipeline's own output files.
+
+```bash
+python -m src.reporting              # generate the reports first
+streamlit run dashboards/streamlit_app.py
+```
+
+### Business Analytics view
+
+| KPI | Result |
 |---|---|
-| Completeness | Required fields are non-null (with business-aware exceptions — see below) |
-| Uniqueness | Primary/business keys have no duplicates, at the correct grain |
-| Validity | Values fall within legal bounds (price > 0, review_score 1–5, valid state codes) |
-| Consistency | Standardized casing/formats across text fields |
-| Referential Integrity | Every foreign key resolves to a real parent record |
-| Timeliness | Event timestamps occur in a physically possible order |
+| Revenue | R$ 15.84M |
+| Orders | 98,666 |
+| Customers | 95,420 |
+| Average Order Value | R$ 160.58 |
+| Late Delivery Rate | 6.8% |
 
-**Business-aware judgment calls baked into the rules, not glossed over:**
+Includes: monthly revenue trend, revenue by product category, revenue by customer state, order-status distribution, top sellers by revenue, delivery performance.
 
-- `review_comment_title` / `review_comment_message` are **optional** —
-  missing text is never scored as a completeness defect.
-- `order_delivered_customer_date` is only flagged missing when
-  `order_status = 'delivered'` (rule DQ008). Cancelled/unavailable orders
-  legitimately never reach delivery.
-- Product physical attributes (`product_weight_g`, dimensions) are never
-  imputed with 0 — a NULL weight is not a zero weight.
-- `order_item_id` and `payment_sequential` are validated as **composite**
-  keys (`order_id` + sequence number), not as standalone primary keys,
-  because an order legitimately has multiple items and multiple payments.
-- `geolocation` has a large volume of full-row duplicates by design (many
-  geographic observations per zip prefix). Rather than blindly
-  deduplicating the raw table, a deterministic, documented rule builds a
-  one-row-per-zip-prefix analytical lookup (`dim_location`) while the raw
-  table itself is left untouched.
+### Data Quality & Governance view (primary dashboard)
 
-Scoring methodology (dimension weights, dataset score, overall score) is
-fully documented in `src/quality_score.py`.
+Overall quality score · records processed · quality issues · critical open issues · open vs. resolved issues · resolution rate · quality by dataset · quality by dimension · issues by severity · issues by dataset · reconciliation status · referential-integrity failures · full filterable issue register · reconciliation detail.
 
-## Governance Framework
+This lets a reviewer drill from a single headline number down to a specific rule:
 
-- **Data dictionary** (`governance/data_dictionary.csv`): every important
-  field with its description, type, nullability, business definition,
-  data owner, classification, and the quality rule(s) that govern it.
-- **Classification** (`governance/data_classification.csv`): simulated
-  Public / Internal / Confidential / Sensitive labels with handling
-  guidance. **These are project-level simulated classifications, not
-  Mastercard's or any organization's real internal scheme** — see
-  `governance/README_GOVERNANCE.md` for the explicit disclaimer.
-- **Ownership**: each data dictionary entry has an illustrative
-  `data_owner` (e.g. "Finance Data Team") to demonstrate accountability
-  mapping, not a claim about real organizational structure.
-- **Quality rules** (`governance/quality_rules.csv`): the single source
-  of truth the validation engine reads from.
+```
+Overall Quality Score → Dataset / Dimension → Issue Severity → Specific Rule → Affected Records
+```
 
-## Issue Management
+### Reconciliation detail (example)
 
-Every validation rule produces an issue-register record — including
-passing rules, so the register shows full coverage, not just failures.
-Schema: `issue_id, rule_id, dataset, field, issue_description, severity,
-affected_records, detected_at, status, resolution, resolved_at`.
-Severity levels (Critical/High/Medium/Low/Informational) distinguish real
-defects from expected or explainable missingness — see
-`DATA-SPECIFIC IMPLEMENTATION CONTEXT` principles baked into
-`src/transform.py` and `src/validation.py`. Output: `reports/issue_register.csv`.
+```
+Dataset         Raw Count    Transformed Count    Variance    Status
+---------------------------------------------------------------------
+customers          99,441          99,441            0%       PASS
+orders              99,441          99,441            0%       PASS
+order_items         112,650         112,650            0%       PASS
+payments            103,886         103,886            0%       PASS
+reviews              99,224          99,224            0%       PASS
+products             32,951          32,951            0%       PASS
+sellers               3,095           3,095            0%       PASS
+```
 
-## Reconciliation
+A separate **Power BI specification** (`dashboards/power_bi_dashboard_spec.md`) documents which PostgreSQL table/query feeds each visual, for teams that prefer a PostgreSQL-connected BI tool instead of Streamlit. It is a specification only — no Power BI report is included in this repository.
 
-`src/reconciliation.py` implements source-to-target controls across
-**RAW → TRANSFORMED → POSTGRESQL**: record counts, distinct key counts,
-and monetary totals (price, freight, payment value), each classified
-PASS / WARNING / FAIL against documented variance thresholds
-(0.1% / 1%). Output: `reports/reconciliation_report.json`. A `FAIL`
-status halts the Airflow DAG rather than silently continuing.
+---
 
-## Dashboards
+## 🧾 Governance Framework
 
-Two Power BI dashboards, fully specified (including which PostgreSQL
-table/query feeds each visual) in `dashboards/power_bi_dashboard_spec.md`:
+**Data Dictionary** — `governance/data_dictionary.csv`
+Field definitions, data types, nullability, business definitions, data ownership, classification, and the quality rule(s) governing each field.
 
-1. **Business Analytics** — revenue, orders, AOV, delivery performance,
-   top categories/sellers.
-2. **Data Quality & Governance** (primary dashboard for this project) —
-   overall quality score, issues by severity/dataset, open vs. resolved,
-   referential-integrity failures, reconciliation status.
+**Data Classification** — `governance/data_classification.csv`
+Simulated classifications (Public / Internal / Confidential / Sensitive). **These are illustrative, project-level classifications and do not represent the internal policy of any real organization** — see `governance/README_GOVERNANCE.md` for the explicit disclaimer.
 
-No dashboard screenshots are included — build them by connecting Power BI
-Desktop to `olist_analytics` per the spec; this avoids fabricating results
-that weren't actually produced by a real Power BI session.
+**Quality Rules** — `governance/quality_rules.csv`
+The configuration layer the validation engine reads from. Adding or modifying a rule is a config change, not a code change.
 
-## Orchestration (Airflow)
+---
 
-`dags/olist_etl_dag.py` runs: `extract → profile → validate → transform →
-quality_score → reconcile → load_postgres → generate_report`. The
-`reconcile` and `generate_report` tasks raise `AirflowFailException` when
-reconciliation fails or critical issues remain open, so the DAG fails
-loudly on a genuine control breach instead of reporting a false "success."
-Retries are configured on the PostgreSQL load task for transient
-connection issues.
+## ⚙️ Airflow Orchestration
 
-## Testing
+`dags/olist_etl_dag.py`:
 
-`pytest` covers `src/validation.py`, `src/transform.py`, and
-`src/reconciliation.py` with both positive and negative cases: duplicate
-detection, null validation, invalid values, referential integrity, date
-logic, transformation correctness, row-count preservation, and
-reconciliation pass/fail behavior. Run with:
+```
+extract → profile → validate → transform → quality_score
+        → reconcile → load_postgres → generate_report
+```
+
+Operational controls: retry handling on the PostgreSQL load task, reconciliation-failure gating, critical-issue failure conditions, sequential task dependencies, automated report generation. Deployed with a lightweight single-node `LocalExecutor`.
+
+---
+
+## 🧪 Testing
 
 ```bash
 pytest tests/ -v
 ```
 
-## Deployment (Docker)
+Coverage: duplicate detection, null validation, invalid-value detection, referential integrity, date/timestamp logic, transformation correctness, row-count preservation, reconciliation PASS/FAIL behavior — both positive and negative cases.
 
-`docker-compose.yml` runs PostgreSQL, a single-node Airflow
-(LocalExecutor), and the ETL application container. Kept intentionally
-minimal for a portfolio project — no CeleryExecutor/Redis. See
-[Setup & Run Instructions](#setup--run-instructions).
+---
 
-## Project Results
-
-Populate this section by running the pipeline once against the real
-dataset and copying the summary from `reports/pipeline_run_report.json`:
+## 🐳 Docker Deployment
 
 ```bash
-python -m src.reporting
-cat reports/pipeline_run_report.json
+cp .env.example .env                     # set a real POSTGRES_PASSWORD
+docker compose up -d postgres             # data warehouse
+docker compose run --rm etl               # run the pipeline once
+docker compose up -d streamlit            # dashboard at http://localhost:8501
+docker compose up -d airflow-init airflow-webserver airflow-scheduler
+docker compose ps
 ```
 
-No numbers are pre-filled here — every result in this repository is
-generated dynamically at run time, never fabricated (see
-`DATA-SPECIFIC IMPLEMENTATION CONTEXT`, section 19).
+Services: PostgreSQL · ETL · Streamlit · Airflow Init · Airflow Scheduler · Airflow Webserver.
 
-## Limitations
+---
 
-- Olist is a **public** e-commerce dataset — not proprietary or
-  transactional financial data from any real institution.
-- The governance classifications in this project are **simulated** for
-  demonstration purposes; they are not Mastercard's (or any
-  organization's) actual internal data classification policy.
-- This project **is not** Mastercard internal data, systems, or process
-  documentation, and makes no claim to be.
-- Controls (severity thresholds, reconciliation variance bands, scoring
-  weights) are designed to be reasonable and documented for portfolio
-  demonstration — they are illustrative, not organization-approved SLAs.
+## 📁 Project Structure
 
-## Future Improvements
+```
+olist-data-governance/
+│
+├── data/
+│   ├── raw/                     # place the 9 Olist CSVs here (untouched by the pipeline)
+│   └── processed/                # cleaned parquet outputs
+│
+├── src/
+│   ├── config.py
+│   ├── extract.py
+│   ├── profile.py
+│   ├── validation.py
+│   ├── transform.py
+│   ├── quality_score.py
+│   ├── reconciliation.py
+│   ├── load.py
+│   ├── reporting.py
+│   └── logging_setup.py
+│
+├── sql/
+│   ├── create_database.sql
+│   ├── create_tables.sql
+│   ├── transformations.sql
+│   └── analytics.sql
+│
+├── governance/
+│   ├── quality_rules.csv
+│   ├── data_dictionary.csv
+│   ├── data_classification.csv
+│   └── README_GOVERNANCE.md
+│
+├── reports/                      # generated by the pipeline (not committed)
+│   ├── data_cleaning_log.csv
+│   ├── issue_register.csv
+│   ├── pipeline_run_report.json
+│   ├── profile_report.json
+│   ├── quality_scorecard.json
+│   └── reconciliation_report.json
+│
+├── dashboards/
+│   ├── streamlit_app.py
+│   ├── power_bi_dashboard_spec.md
+│   └── screenshots/
+│       ├── business-analytics-1.png
+│       ├── business-analytics-2.png
+│       ├── data-quality-1.png
+│       ├── data-quality-2.png
+│       ├── issue-register.png
+│       └── reconciliation.png
+│
+├── excel/
+│   └── generate_excel_report.py
+│
+├── dags/
+│   └── olist_etl_dag.py
+│
+├── notebooks/
+│   └── exploration.ipynb
+│
+├── tests/
+│   ├── test_validation.py
+│   ├── test_transform.py
+│   └── test_reconciliation.py
+│
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── README.md
+```
 
-- Add data lineage visualization (e.g. OpenLineage) across the DAG.
-- Add trend history tables so quality-score and reconciliation-status
-  changes can be tracked run-over-run in Power BI (currently each run
-  overwrites the prior JSON/CSV snapshot).
-- Add a lightweight data-contract layer (e.g. JSON Schema per source
-  file) to catch upstream schema drift before extraction.
-- Expand the issue register workflow with an actual resolution UI/queue
-  instead of a flat CSV.
+---
 
-## Setup & Run Instructions
+## 🚀 Setup
 
-### 1. Get the data
-Download the dataset from Kaggle and place all 9 CSVs in `data/raw/`:
+### 1. Clone the repository
+```bash
+git clone https://github.com/Abhi721401/olist-data-governance.git
+cd olist-data-governance
+```
+
+### 2. Create a virtual environment
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure environment variables
+```bash
+cp .env.example .env
+```
+Update `.env` with your local database configuration. **Never commit `.env` or real credentials.**
+
+### 5. Add the Olist data
+Download from Kaggle and place all nine CSVs in `data/raw/`:
 https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
 
-### 2. Local Python setup
-```bash
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env             # then edit .env with real credentials
-```
-
-### 3. Run the full pipeline (extract → report)
+### 6. Run the pipeline
 ```bash
 python -m src.reporting
 ```
-This writes `reports/profile_report.json`, `reports/issue_register.csv`,
-`reports/quality_scorecard.json`, `reports/reconciliation_report.json`,
-`reports/data_cleaning_log.csv`, and `reports/pipeline_run_report.json`.
 
-### 4. Generate the Excel report
+### 7. View the dashboard
+```bash
+streamlit run dashboards/streamlit_app.py
+```
+
+### 8. Generate the Excel report
 ```bash
 python -m excel.generate_excel_report
 ```
-Output: `excel/olist_data_quality_report.xlsx`.
 
-### 5. Set up PostgreSQL and load the star schema
-```bash
-# with a local Postgres instance running and .env configured:
-psql -U postgres -f sql/create_database.sql
-psql -U postgres -d olist_analytics -f sql/create_tables.sql
-psql -U postgres -d olist_analytics -f sql/transformations.sql
-python -m src.load
-```
-
-### 6. Run tests
+### 9. Run tests
 ```bash
 pytest tests/ -v
 ```
 
-### 7. Run everything in Docker
+### 10. PostgreSQL + Docker (optional)
 ```bash
-cp .env.example .env             # set a real POSTGRES_PASSWORD
+psql -U postgres -f sql/create_database.sql
+psql -U postgres -d olist_analytics -f sql/create_tables.sql
+python -m src.load
+# or, fully containerized:
 docker compose up -d postgres
 docker compose run --rm etl
-docker compose up -d airflow-init airflow-webserver airflow-scheduler
-# Airflow UI: http://localhost:8080 (user/pass created by airflow-init: admin/admin)
+docker compose up -d streamlit
 ```
 
-### 8. Connect Power BI
-Get Data → PostgreSQL database → host/port/db from `.env` → follow
-`dashboards/power_bi_dashboard_spec.md` for which table/query feeds each visual.
+---
+
+## 📄 Generated Reports
+
+```
+reports/profile_report.json
+reports/issue_register.csv
+reports/quality_scorecard.json
+reports/reconciliation_report.json
+reports/data_cleaning_log.csv
+reports/pipeline_run_report.json
+```
+
+`reports/pipeline_run_report.json` is the primary run summary, e.g.:
+
+```json
+{
+  "total_records_processed": 1550922,
+  "quality_score": 99.96,
+  "open_issues": 6,
+  "critical_open_issues": 0,
+  "reconciliation_status": "PASS",
+  "pipeline_status": "PASSED"
+}
+```
+
+---
+
+## 📌 Project Results
+
+The executed pipeline processed **1.55 million records** across nine Olist datasets, evaluated **30 validation rules**, and achieved **99.96% overall data quality** — 100% completeness, 100% validity, 100% referential integrity, 99.94% timeliness, 99.71% uniqueness.
+
+The reconciliation framework achieved **15/15 PASS** (0 warnings, 0 failures). The issue-management framework logged **24 resolved** and **6 open** issues, with **0 critical open issues**.
+
+This demonstrates that the pipeline does not simply "clean" data — it **measures, documents, governs, and controls** data quality throughout the lifecycle.
+
+---
+
+## 🎯 Skills Demonstrated
+
+**Data Engineering** — ETL development, data transformation, pipeline orchestration, PostgreSQL, Docker, Airflow
+
+**Data Analytics** — SQL, business KPIs, revenue analysis, seller analytics, delivery analytics, dashboard development
+
+**Data Quality** — completeness, uniqueness, validity, consistency, referential integrity, timeliness, quality scoring
+
+**Data Governance** — data dictionary, data classification, data ownership, quality rules, issue management, operational controls
+
+**Data Management** — source-to-target reconciliation, data lineage concepts, control frameworks, exception handling, auditability, automated reporting
+
+---
+
+## ⚠️ Limitations
+
+- The Olist dataset is public and historical.
+- Governance classifications (`governance/data_classification.csv`) are simulated for portfolio purposes.
+- Data owners listed in the data dictionary are illustrative, not real organizational owners.
+- Quality thresholds and reconciliation tolerance bands are designed for demonstration.
+- This project does not represent the internal data, systems, policies, or processes of any real company.
+- Dashboard results are based on the public Olist dataset and the pipeline run that produced them.
+
+---
+
+## 🔮 Future Improvements
+
+- OpenLineage-based data lineage
+- Historical quality-score tracking across pipeline runs
+- Data-quality trend dashboards
+- JSON/SQL-based data contracts and schema-drift detection
+- Automated issue-resolution workflows
+- CI/CD pipeline validation
+- Cloud deployment
+- Production database monitoring and reconciliation-failure alerting
+- Role-based access control
+- Data catalog integration
+
+---
+
+## ⭐ Why This Project Matters
+
+The central question this project answers isn't *"what happened in the Olist data?"* — it's:
+
+**"Can we trust the data enough to make decisions from it?"**
+
+The platform provides evidence through a documented chain:
+
+```
+PROFILING → VALIDATION → QUALITY SCORING → GOVERNANCE
+→ ISSUE MANAGEMENT → RECONCILIATION → DATABASE INTEGRITY
+→ ANALYTICS → REPORTING
+```
+
+Relevant to roles such as: **Data Analyst · Data Quality Analyst · Data Management Analyst · Analytics & Metrics Analyst · BI Analyst · Data Governance Analyst · Junior Data Engineer**
+
+---
+
+## 📬 Author
+
+**Abhijnan Das**
+M.Sc. Statistics · Data Analytics · Data Science · Data Engineering
+GitHub: [github.com/Abhi721401](https://github.com/Abhi721401)
+```
