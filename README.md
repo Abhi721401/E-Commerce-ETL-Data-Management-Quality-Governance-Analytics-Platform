@@ -1,4 +1,4 @@
-# Olist E-Commerce Data Management, Quality & Governance Analytics Platform
+# E-Commerce ETL, Data Management, Quality & Governance Analytics Platform
 
 A controlled data management pipeline that ensures data is **accurate,
 complete, consistent, traceable, governed, and ready for business
